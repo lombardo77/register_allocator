@@ -1,4 +1,5 @@
 import re
+import sys
 
 def file_as_string(f):
     a = ''
@@ -63,11 +64,26 @@ def max_dist(ds):
  
    
 
-f = open('testcases/block9.i', 'r')
-p = parse_op(f)
 
-def allocate(p):
-    regs, line, pr, mem = 2*[None], 0, None, 4
+def spill(line, pr, p, mem, spills):
+    spills.append([line, 'loadI', str(mem), 'r255'])
+    spills.append([line, 'store', 'r' + str(pr[2]), 'r255'])
+    p.insert(line+pr[1], ['load', 'r255', pr[0]])
+    p.insert(line+pr[1], ['loadI', str(mem), 'r255'])
+
+
+def add_spills(p, spills):
+    i, q = 0, []
+    for x in p:
+        if i in map((lambda x : x[0]), spills):
+            for s in filter((lambda x : True if x[0] == i else False), spills):
+                q.append(s[1:])
+        q.append(x)
+        i +=1
+    return q
+
+def allocate(p, k):
+    regs, line, pr, mem = (k-1)*[None], 0, None, 4
     spills = []
     for i in p:
         for w in enumerate(i):
@@ -76,26 +92,15 @@ def allocate(p):
                     pr = get_reg(regs, p, line)
                     regs[pr[2]] = i[w[0]]
                     if pr[1] > -1:
-                        spills.append([line, 'loadI', str(mem), 'r255'])
-                        spills.append([line, 'store', 'r' + str(pr[2]), 'r255'])
-                        p.insert(line+pr[1], ['load', 'r255', pr[0]])
-                        p.insert(line+pr[1], ['loadI', str(mem), 'r255'])
+                        spill(line, pr, p, mem, spills)
                         mem +=4
                 i[w[0]] = 'r' + str(regs.index(i[w[0]]))
         line += 1
-    q = []
-    i = 0
-    for x in p:
-        if i in map((lambda x : x[0]), spills):
-            for s in filter((lambda x : True if x[0] == i else False), spills):
-                q.append(s[1:])
-        q.append(x)
-        i +=1
-    print(q)
-    return q
-def write_to_file(p):
+    return add_spills(p, spills)
+
+def write_to_file(p, name):
     one, two = ['store', 'load', 'loadI'], ['add', 'mult', 'sub', 'lshift', 'rshift']
-    f = open('test.i', 'w')
+    f = open(name, 'w')
     for i in p:
         if i[0] in one:
             i.insert(2, '=>')
@@ -103,6 +108,12 @@ def write_to_file(p):
             i.insert(2, ',')
             i.insert(4, '=>')
         f.write('\t' + ' '.join(i) + '\n')
-        
-q = allocate(p)
-write_to_file(q)
+
+def main(args):
+    f = open(f'testcases/{args[2]}.i', 'r')
+    p = parse_op(f)
+    q = allocate(p, int(args[1]))
+    write_to_file(q, args[3])
+
+if __name__ == '__main__':
+    main(sys.argv)
