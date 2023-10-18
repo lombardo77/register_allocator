@@ -4,5 +4,5 @@ Simple bottom up register allocator imnplemented in python. Takes an ILOC progra
 
 ### To run:
 ```
-$ python3 
+$ python3 alloc.py [k] [ILOC file name] 
 ```
